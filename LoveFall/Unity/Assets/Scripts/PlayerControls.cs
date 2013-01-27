@@ -36,65 +36,148 @@ public class PlayerControls : MonoBehaviour {
 	
 	public AnimationClip animIdle;
 	public AnimationClip animFall;
-
+	public AnimationClip animBounce;
+	public AnimationClip animRun;
+	public AnimationClip animJumpDive;
+	public AnimationClip animJump;
 	
-	float fallTimer;
+	public float animRunSpeed;
+	public float animJumpSpeed;
+	
+	public float bounceTimer = 5.0f;
+	
+	public int runDirection=0;
+	
+	public float fallTimer;
+	public float maxFallTime = 0.5f;
+	
+	public float currentSpeed;
+	
+	Vector3 lastPosition;
 	
 	
 	// Use this for initialization
 	void Awake () {
 			
 		thisTransform = transform;	
-
+		
+		runDirection = 1;
+		playerMesh.transform.forward = Vector3.right;
+		
 	}
 	
 	// Update is called once per frame
 	void Update () {
 	
+		bool moving = false;
+		
 		// Check for collision
 		Ray ray = new Ray( thisTransform.position, Vector3.down );
 	
+		Vector3 oldPosition = thisTransform.position;
 		
-		// Move left
-		if( Input.GetKey( KeyCode.LeftArrow ) ) {
+		if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
 			
-			if( onGround || bJump ) {
-			
-				Vector3 oldPosition = thisTransform.position;
-				thisTransform.position = oldPosition + ((Vector3.left * moveSpeed) * Time.deltaTime);
-			} else {
+			// Move left
+			if( Input.GetKey( KeyCode.LeftArrow ) ) {
 				
-				//Vector3 oldPosition = thisTransform.position;
-				//thisTransform.position = oldPosition + (((Vector3.left * moveSpeed) * Time.deltaTime) * inAirMod);
+				runDirection = 2;
+				if( onGround || bJump ) {
 				
-				//rotateZ += (rotateZ + rotateSpeed ) * Time.deltaTime;
+					thisTransform.position = oldPosition + ((Vector3.left * moveSpeed) * Time.deltaTime);
+					
+					if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+						playerMesh.animation.CrossFade( animRun.name );
+						playerMesh.animation[ animRun.name ].speed = animRunSpeed;
+					
+					}
+					playerMesh.transform.forward = Vector3.right;
+					
+					moving = true;
+					
+				} else {
+					
+					if( fallTimer < maxFallTime ) {
+						
+						thisTransform.position = oldPosition + ((Vector3.left * moveSpeed) * Time.deltaTime);
+						
+						
+						
+						if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+							playerMesh.animation.CrossFade( animRun.name );
+							playerMesh.animation[ animRun.name ].speed = animRunSpeed;
+							
+						}
+						playerMesh.transform.forward = Vector3.right;
+							
+						moving = true;
+					} else {
+									
+						rotateZAccel -= rotateSpeed * Time.deltaTime;
+					}
+				}			
 				
-				rotateZAccel += rotateSpeed * Time.deltaTime;
-			}			
-			
-		}
-		
-		// Move right
-		if( Input.GetKey( KeyCode.RightArrow ) ) {
-	
-			if( onGround ) {
-			
-				Vector3 oldPosition = thisTransform.position;
-				thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
-			} else {
-				
-				//Vector3 oldPosition = thisTransform.position;
-				//thisTransform.position = oldPosition + (((Vector3.right * moveSpeed) * Time.deltaTime) * inAirMod);
-				
-				//rotateZ -= (rotateZ + rotateSpeed ) * Time.deltaTime;
-				
-				rotateZAccel -= rotateSpeed * Time.deltaTime;
 			}
+			
+			
+			
+			// Move right
+			if( Input.GetKey( KeyCode.RightArrow ) ) {
+		
+				runDirection = 1;
+				
+				if( onGround ) {
+				
+					thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
+					
+					if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+						playerMesh.animation.CrossFade( animRun.name );
+						playerMesh.animation[ animRun.name ].speed = animRunSpeed;
+						
+					} 
+					playerMesh.transform.forward = Vector3.left;
+			
+					moving = true;
+					
+				} else {
+					
+					if( fallTimer < maxFallTime ) {
+						
+						thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
+						if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+							playerMesh.animation.CrossFade( animRun.name );
+							playerMesh.animation[ animRun.name ].speed = animRunSpeed;
+							
+														
+							moving = true;
+						} 
+						playerMesh.transform.forward = Vector3.left;
+					} else {
+					
+						rotateZAccel += rotateSpeed * Time.deltaTime;
+					}
+					
+				}
+			}
+		} else {
+		
+			// Bounce right
+			if( runDirection == 1 ) {
+				
+				thisTransform.position = oldPosition + ((Vector3.right * fallMoveSpeed) * Time.deltaTime);
+				DebugMessage( "Bounce right" );
+			} else {
+			
+				thisTransform.position = oldPosition + ((Vector3.left * fallMoveSpeed) * Time.deltaTime);
+				DebugMessage( "Bounce left" );
+			}
+			
 		}
 		
 		// Tilt up
 		if( Input.GetKey( KeyCode.UpArrow ) && !onGround ) {
 			
+			rotateTilt += tiltSpeed * Time.deltaTime;
 		}
 				
 		// Tilt down
@@ -110,6 +193,11 @@ public class PlayerControls : MonoBehaviour {
 			
 				bJump = true;
 				jumpTimer = jumpMaxTimer;
+				
+				playerMesh.animation[ animJump.name ].speed = animJumpSpeed;
+				playerMesh.animation.CrossFade( animJump.name );
+				
+				DebugMessage("Jump Anim" );
 			}
 		}						
 		
@@ -117,25 +205,24 @@ public class PlayerControls : MonoBehaviour {
 		if( bJump ) { 
 					
 			if( jumpTimer > 0 ) {
-				
-				Vector3 oldPosition = thisTransform.position;
-				
+								
 				jumpTimer -= Time.deltaTime;
 				
 				thisTransform.position = oldPosition + ((Vector3.up * jumpAccel) * Time.deltaTime);
 				
+				moving = true;
+								
 			} else {
 				
 				bJump = false;
+				onGround = false;
 			}
-		}
+		} 
 		
 		// FALL!
 		if( !onGround && !bJump ) {
 			
-			Vector3 oldPosition = thisTransform.position;
-			
-			thisTransform.position = oldPosition + ((Vector3.down * gravityPull) * Time.deltaTime);
+			thisTransform.position += ((Vector3.down * gravityPull) * Time.deltaTime);
 		}
 		
 		// Player rotation
@@ -163,38 +250,62 @@ public class PlayerControls : MonoBehaviour {
 			
 				moveDirection = -(360.0f-rotateZ)/90.0f;
 			}
-			
-			
-			DebugMessage ( "RotateZ: " + rotateZ );
-			
+				
 			playerMesh.transform.rotation = Quaternion.Euler( 0, 0, rotateZ );
 			thisTransform.Translate( (Vector3.right * moveDirection * fallMoveSpeed) * Time.deltaTime );
 			
 		} else {
 		
 			// Rotate player upright on platform
-			playerMesh.transform.rotation = Quaternion.identity;
+			//playerMesh.transform.rotation = Quaternion.identity;
 		}
 		
 		// Animations
-		
-		if( !onGround ) {
+		if( !onGround || bJump ) {
 			
 			fallTimer += Time.deltaTime;
 			
-			if( fallTimer > 0.5f ) {
+			if( fallTimer > maxFallTime ) {
 			
 				if( !playerMesh.animation.IsPlaying( animFall.name ) )
-					playerMesh.animation.Blend( animFall.name, 1, 0.1f );
+					playerMesh.animation.CrossFade( animFall.name );
 			}
+			
 		} else {
-			
+						
 			fallTimer = 0;
-			
-			if( !playerMesh.animation.IsPlaying( animIdle.name ) )
-				playerMesh.animation.Blend( animIdle.name, 1, 0.1f );
 		}
+		
+		if( !moving && onGround && !bJump ) {
+			
+			// Idle animation
+			
+			if( !playerMesh.animation.IsPlaying( animJump.name ) && !playerMesh.animation.IsPlaying( animBounce.name ) ) {
+				playerMesh.animation.CrossFade( animIdle.name );
 				
+				//playerMesh.transform.forward = Vector3.forward;
+			}
+			
+		}
+
+				
+		if( bJump || playerMesh.animation.IsPlaying( animJump.name ) ) {
+			if( runDirection == 2 )
+				playerMesh.transform.forward = Vector3.right;
+			else
+				playerMesh.transform.forward = Vector3.left;
+		}
+
+		
+				
+	}
+	
+	void FixedUpdate() {
+	
+		// Calculate the speed
+		currentSpeed = Vector3.Distance( thisTransform.position, lastPosition ) * 100;
+
+		lastPosition = thisTransform.position;
 	}
 	
 	void DebugMessage( string message ) {
@@ -213,53 +324,85 @@ public class PlayerControls : MonoBehaviour {
 	
 	void OnCollisionEnter( Collision col ) {
 	
-		Collider hit = col.collider;
+		if( col.transform.tag == "platform" ) {
+			Vector3 point = col.contacts[0].point;
+		
+			point.x = thisTransform.position.x;
+			point.z = thisTransform.position.z;
+			thisTransform.position = point;
+		}
+	}
+	
+	
+	void OnTriggerEnter( Collider hit ) {
+	
+		//Collider hit = col.collider;
 		
 		DebugMessage( hit.collider.name );
 			
 		switch( hit.collider.tag ) {
 			
 			case "ground":
-				// End of game!
-				onGround = true;
-				
-				rotateZ = 0;
-				rotateZAccel = 0;
-				rotateTilt = 0;
-			
-				playerMesh.animation.Blend( animIdle.name, 1, 0.1f );
-				break;
-			
 			case "platform":
+			
 				onGround = true;
 				
 				rotateZ = 0;
 				rotateZAccel = 0;
 				rotateTilt = 0;
 			
-				playerMesh.animation.Blend( animIdle.name, 1, 0.1f );
+				if( fallTimer > bounceTimer ) {
+					
+					playerMesh.animation.CrossFade( animBounce.name );
+					DebugMessage( "Bounce anim" );
+				
+					// Bounce right
+					if( rotateZ > 0 && rotateZ < 150 ) {
+						
+						runDirection = 2;
+					}
+					
+					// Bounce  left
+					if( rotateZ < 360 && rotateZ > 210 ) {
+					
+						runDirection = 1;
+					}
+				
+				} else {
+				
+					if( !playerMesh.animation.IsPlaying( animIdle.name ) ) {
+						playerMesh.animation.CrossFade( animIdle.name );
+						
+					}
+				}
+				
+				fallTimer = 0;
+							
 				break;				
 			
 		}			
 	}
 	
-	void OnCollisionExit( Collision col ) {
+	void OnTriggerExit( Collider hit ) {
 	
 		
-		Collider hit = col.collider;
+		//Collider hit = col.collider;
 		
 		DebugMessage( hit.collider.name );
 			
 		switch( hit.collider.tag ) {
 			
 			case "ground":
+
 				onGround = false;
+					
 				break;				
 		
 		
 			case "platform":
-				onGround = false;
 			
+				onGround = false;	
+				
 				break;				
 		
 		}
