@@ -55,6 +55,9 @@ public class PlayerControls : MonoBehaviour {
 	
 	Vector3 lastPosition;
 	
+	public float minTilt;
+	public float maxTilt;
+	
 	
 	// Use this for initialization
 	void Awake () {
@@ -166,7 +169,7 @@ public class PlayerControls : MonoBehaviour {
 				
 				thisTransform.position = oldPosition + ((Vector3.right * fallMoveSpeed) * Time.deltaTime);
 				DebugMessage( "Bounce right" );
-			} else {
+			} else if( runDirection == 2 ) {
 			
 				thisTransform.position = oldPosition + ((Vector3.left * fallMoveSpeed) * Time.deltaTime);
 				DebugMessage( "Bounce left" );
@@ -177,13 +180,19 @@ public class PlayerControls : MonoBehaviour {
 		// Tilt up
 		if( Input.GetKey( KeyCode.UpArrow ) && !onGround ) {
 			
-			rotateTilt += tiltSpeed * Time.deltaTime;
+			rotateTilt -= tiltSpeed * Time.deltaTime;
+			
+			if( rotateTilt < minTilt )
+				rotateTilt = minTilt;
 		}
 				
 		// Tilt down
 		if( Input.GetKey( KeyCode.DownArrow ) && !onGround ) {
 		
+			rotateTilt += tiltSpeed * Time.deltaTime;
 			
+			if( rotateTilt > maxTilt )
+				rotateTilt = maxTilt;
 		}
 		
 		// Jump
@@ -222,7 +231,7 @@ public class PlayerControls : MonoBehaviour {
 		// FALL!
 		if( !onGround && !bJump ) {
 			
-			thisTransform.position += ((Vector3.down * gravityPull) * Time.deltaTime);
+			thisTransform.position += ((Vector3.down * (gravityPull + rotateTilt)) * Time.deltaTime);
 		}
 		
 		// Player rotation
@@ -251,7 +260,7 @@ public class PlayerControls : MonoBehaviour {
 				moveDirection = -(360.0f-rotateZ)/90.0f;
 			}
 				
-			playerMesh.transform.rotation = Quaternion.Euler( 0, 0, rotateZ );
+			playerMesh.transform.rotation = Quaternion.Euler( ( onGround ? 0 : -rotateTilt * 10 ), 0, rotateZ );
 			thisTransform.Translate( (Vector3.right * moveDirection * fallMoveSpeed) * Time.deltaTime );
 			
 		} else {
@@ -343,40 +352,77 @@ public class PlayerControls : MonoBehaviour {
 		switch( hit.collider.tag ) {
 			
 			case "ground":
+				if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
+					
+					onGround = true;
+					
+					rotateZ = 0;
+					rotateZAccel = 0;
+					rotateTilt = 0;
+				
+					if( fallTimer > bounceTimer ) {
+						
+						playerMesh.animation.CrossFade( animBounce.name );
+						DebugMessage( "Bounce anim" );
+					
+						// Bounce right
+						if( rotateZ > 0 && rotateZ < 150 ) {
+							
+							runDirection = 2;
+						} else if( rotateZ < 360 && rotateZ > 210 ) {
+						
+							runDirection = 1;
+						} else {
+						
+							runDirection = 0;
+						}
+					
+					} else {
+					
+						if( !playerMesh.animation.IsPlaying( animIdle.name ) ) {
+							playerMesh.animation.CrossFade( animIdle.name );
+							
+						}
+					}
+					
+					fallTimer = 0;
+				}
+							
+				break;				
 			case "platform":
 			
-				onGround = true;
-				
-				rotateZ = 0;
-				rotateZAccel = 0;
-				rotateTilt = 0;
-			
-				if( fallTimer > bounceTimer ) {
+				if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
 					
-					playerMesh.animation.CrossFade( animBounce.name );
-					DebugMessage( "Bounce anim" );
+					onGround = true;
+					
+					rotateZ = 0;
+					rotateZAccel = 0;
+					rotateTilt = 0;
 				
-					// Bounce right
-					if( rotateZ > 0 && rotateZ < 150 ) {
+					if( fallTimer > bounceTimer ) {
 						
-						runDirection = 2;
-					}
+						playerMesh.animation.CrossFade( animBounce.name );
+						DebugMessage( "Bounce anim" );
 					
-					// Bounce  left
-					if( rotateZ < 360 && rotateZ > 210 ) {
-					
-						runDirection = 1;
-					}
-				
-				} else {
-				
-					if( !playerMesh.animation.IsPlaying( animIdle.name ) ) {
-						playerMesh.animation.CrossFade( animIdle.name );
+						// Bounce right
+						if( rotateZ > 0 && rotateZ < 150 ) {
+							
+							runDirection = 2;
+						} else if( rotateZ < 360 && rotateZ > 210 ) {
 						
+							runDirection = 1;
+						} 
+					
+					} else {
+					
+						if( !playerMesh.animation.IsPlaying( animIdle.name ) ) {
+							playerMesh.animation.CrossFade( animIdle.name );
+							
+						}
 					}
+					
+					fallTimer = 0;
 				}
-				
-				fallTimer = 0;
 							
 				break;				
 			
@@ -402,6 +448,7 @@ public class PlayerControls : MonoBehaviour {
 			case "platform":
 			
 				onGround = false;	
+				
 				
 				break;				
 		
