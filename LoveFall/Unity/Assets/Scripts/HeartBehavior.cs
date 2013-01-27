@@ -13,7 +13,7 @@ public class HeartBehavior: MonoBehaviour {
 
 		
 	}
-	
+	/*
 	void OnTriggerEnter(Collider collider){
 		switch(collider.gameObject.tag){
 			case "Player":
@@ -24,6 +24,7 @@ public class HeartBehavior: MonoBehaviour {
 		}
 		
 	}
+	*/
 	
 
 	

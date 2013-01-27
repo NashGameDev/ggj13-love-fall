@@ -58,6 +58,18 @@ public class PlayerControls : MonoBehaviour {
 	public float minTilt;
 	public float maxTilt;
 	
+	public AudioClip[] audioFallYells;
+	public AudioClip[] audioHitYells;
+	public AudioClip[] audioHits;
+	public AudioClip audioWind;
+	
+	public bool audioYell = false;
+	
+	public float worldXMin;
+	public float worldXMax;
+	
+	public bool Win;
+	public bool Dead;
 	
 	// Use this for initialization
 	void Awake () {
@@ -73,160 +85,165 @@ public class PlayerControls : MonoBehaviour {
 	void Update () {
 	
 		bool moving = false;
-		
-		// Check for collision
-		Ray ray = new Ray( thisTransform.position, Vector3.down );
-	
 		Vector3 oldPosition = thisTransform.position;
 		
-		if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
+		if( !Dead && !Win ) {
 			
-			// Move left
-			if( Input.GetKey( KeyCode.LeftArrow ) ) {
+			
+			// Check for collision
+			Ray ray = new Ray( thisTransform.position, Vector3.down );
+		
+			
+			
+			if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
 				
-				runDirection = 2;
-				if( onGround || bJump ) {
-				
-					thisTransform.position = oldPosition + ((Vector3.left * moveSpeed) * Time.deltaTime);
+				// Move left
+				if( Input.GetKey( KeyCode.LeftArrow ) ) {
 					
-					if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
-						playerMesh.animation.CrossFade( animRun.name );
-						playerMesh.animation[ animRun.name ].speed = animRunSpeed;
+					runDirection = 2;
+					if( onGround || bJump ) {
 					
-					}
-					playerMesh.transform.forward = Vector3.right;
-					
-					moving = true;
-					
-				} else {
-					
-					if( fallTimer < maxFallTime ) {
-						
 						thisTransform.position = oldPosition + ((Vector3.left * moveSpeed) * Time.deltaTime);
 						
-						
-						
 						if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
 							playerMesh.animation.CrossFade( animRun.name );
 							playerMesh.animation[ animRun.name ].speed = animRunSpeed;
-							
+						
 						}
 						playerMesh.transform.forward = Vector3.right;
-							
+						
 						moving = true;
+						
 					} else {
-									
-						rotateZAccel -= rotateSpeed * Time.deltaTime;
-					}
-				}			
-				
-			}
-			
-			
-			
-			// Move right
-			if( Input.GetKey( KeyCode.RightArrow ) ) {
-		
-				runDirection = 1;
-				
-				if( onGround ) {
-				
-					thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
-					
-					if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
-						playerMesh.animation.CrossFade( animRun.name );
-						playerMesh.animation[ animRun.name ].speed = animRunSpeed;
 						
-					} 
-					playerMesh.transform.forward = Vector3.left;
+						if( fallTimer < maxFallTime ) {
+							
+							thisTransform.position = oldPosition + ((Vector3.left * moveSpeed) * Time.deltaTime);
+							
+							
+							
+							if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+								playerMesh.animation.CrossFade( animRun.name );
+								playerMesh.animation[ animRun.name ].speed = animRunSpeed;
+								
+							}
+							playerMesh.transform.forward = Vector3.right;
+								
+							moving = true;
+						} else {
+										
+							rotateZAccel -= rotateSpeed * Time.deltaTime;
+						}
+					}			
+					
+				}
+				
+				
+				
+				// Move right
+				if( Input.GetKey( KeyCode.RightArrow ) ) {
 			
-					moving = true;
+					runDirection = 1;
 					
-				} else {
+					if( onGround ) {
 					
-					if( fallTimer < maxFallTime ) {
-						
 						thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
+						
 						if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
 							playerMesh.animation.CrossFade( animRun.name );
 							playerMesh.animation[ animRun.name ].speed = animRunSpeed;
 							
-														
-							moving = true;
 						} 
 						playerMesh.transform.forward = Vector3.left;
+				
+						moving = true;
+						
 					} else {
-					
-						rotateZAccel += rotateSpeed * Time.deltaTime;
+						
+						if( fallTimer < maxFallTime ) {
+							
+							thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
+							if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+								playerMesh.animation.CrossFade( animRun.name );
+								playerMesh.animation[ animRun.name ].speed = animRunSpeed;
+								
+															
+								moving = true;
+							} 
+							playerMesh.transform.forward = Vector3.left;
+						} else {
+						
+							rotateZAccel += rotateSpeed * Time.deltaTime;
+						}
+						
 					}
-					
 				}
-			}
-		} else {
-		
-			// Bounce right
-			if( runDirection == 1 ) {
-				
-				thisTransform.position = oldPosition + ((Vector3.right * fallMoveSpeed) * Time.deltaTime);
-				DebugMessage( "Bounce right" );
-			} else if( runDirection == 2 ) {
-			
-				thisTransform.position = oldPosition + ((Vector3.left * fallMoveSpeed) * Time.deltaTime);
-				DebugMessage( "Bounce left" );
-			}
-			
-		}
-		
-		// Tilt up
-		if( Input.GetKey( KeyCode.UpArrow ) && !onGround ) {
-			
-			rotateTilt -= tiltSpeed * Time.deltaTime;
-			
-			if( rotateTilt < minTilt )
-				rotateTilt = minTilt;
-		}
-				
-		// Tilt down
-		if( Input.GetKey( KeyCode.DownArrow ) && !onGround ) {
-		
-			rotateTilt += tiltSpeed * Time.deltaTime;
-			
-			if( rotateTilt > maxTilt )
-				rotateTilt = maxTilt;
-		}
-		
-		// Jump
-		if( Input.GetKey( KeyCode.Space ) && onGround ) {
-			
-			if( !bJump ) {
-			
-				bJump = true;
-				jumpTimer = jumpMaxTimer;
-				
-				playerMesh.animation[ animJump.name ].speed = animJumpSpeed;
-				playerMesh.animation.CrossFade( animJump.name );
-				
-				DebugMessage("Jump Anim" );
-			}
-		}						
-		
-		// Make the player jump
-		if( bJump ) { 
-					
-			if( jumpTimer > 0 ) {
-								
-				jumpTimer -= Time.deltaTime;
-				
-				thisTransform.position = oldPosition + ((Vector3.up * jumpAccel) * Time.deltaTime);
-				
-				moving = true;
-								
 			} else {
+			
+				// Bounce right
+				if( runDirection == 1 ) {
+					
+					thisTransform.position = oldPosition + ((Vector3.right * fallMoveSpeed) * Time.deltaTime);
+					DebugMessage( "Bounce right" );
+				} else if( runDirection == 2 ) {
 				
-				bJump = false;
-				onGround = false;
+					thisTransform.position = oldPosition + ((Vector3.left * fallMoveSpeed) * Time.deltaTime);
+					DebugMessage( "Bounce left" );
+				}
+				
 			}
-		} 
+			
+			// Tilt up
+			if( Input.GetKey( KeyCode.UpArrow ) && !onGround ) {
+				
+				rotateTilt -= tiltSpeed * Time.deltaTime;
+				
+				if( rotateTilt < minTilt )
+					rotateTilt = minTilt;
+			}
+					
+			// Tilt down
+			if( Input.GetKey( KeyCode.DownArrow ) && !onGround ) {
+			
+				rotateTilt += tiltSpeed * Time.deltaTime;
+				
+				if( rotateTilt > maxTilt )
+					rotateTilt = maxTilt;
+			}
+			
+			// Jump
+			if( Input.GetKey( KeyCode.Space ) && onGround ) {
+				
+				if( !bJump ) {
+				
+					bJump = true;
+					jumpTimer = jumpMaxTimer;
+					
+					playerMesh.animation[ animJump.name ].speed = animJumpSpeed;
+					playerMesh.animation.CrossFade( animJump.name );
+					
+					DebugMessage("Jump Anim" );
+				}
+			}						
+			
+			// Make the player jump
+			if( bJump ) { 
+						
+				if( jumpTimer > 0 ) {
+									
+					jumpTimer -= Time.deltaTime;
+					
+					thisTransform.position = oldPosition + ((Vector3.up * jumpAccel) * Time.deltaTime);
+					
+					moving = true;
+									
+				} else {
+					
+					bJump = false;
+					onGround = false;
+				}
+			} 
+		}
 		
 		// FALL!
 		if( !onGround && !bJump ) {
@@ -275,6 +292,8 @@ public class PlayerControls : MonoBehaviour {
 			fallTimer += Time.deltaTime;
 			
 			if( fallTimer > maxFallTime ) {
+				
+				AudioFallYell();
 			
 				if( !playerMesh.animation.IsPlaying( animFall.name ) )
 					playerMesh.animation.CrossFade( animFall.name );
@@ -350,10 +369,34 @@ public class PlayerControls : MonoBehaviour {
 		DebugMessage( hit.collider.name );
 			
 		switch( hit.collider.tag ) {
+		
+		case "Heart":
+			ScoreController.score++;
+			Destroy(hit.gameObject);
+			
+			break;
+			
+			case "Goal":
+				
+				DebugMessage("You win");
+				Win = true;
+				NotificationCenter.DefaultCenter.PostNotification( this, "Win" );
+			
+				NotificationCenter.DefaultCenter.PostNotification( this, "Win" );
+				
+				break;
 			
 			case "ground":
+			
+				if( !Win ) {
+					Dead = true;
+			
+					NotificationCenter.DefaultCenter.PostNotification( this, "Dead" );
+				}
+			
 				if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
 					
+					AudioHitPlatform();
 					onGround = true;
 					
 					rotateZ = 0;
@@ -393,6 +436,8 @@ public class PlayerControls : MonoBehaviour {
 			
 				if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
 					
+					AudioHitPlatform();
+				
 					onGround = true;
 					
 					rotateZ = 0;
@@ -454,4 +499,32 @@ public class PlayerControls : MonoBehaviour {
 		
 		}
 	}
+	
+	void AudioFallYell( ) {
+		
+		if( !audioYell ) {
+			audio.Stop();
+			int randomInt = Random.Range( 0, audioFallYells.Length );
+			
+			audio.PlayOneShot( audioWind );
+			audio.PlayOneShot( audioFallYells[ randomInt ] );
+			audioYell = true;
+		}	
+	}
+	
+	void AudioHitPlatform() {
+		
+		audioYell = false;
+		
+		audio.Stop();
+		
+		int randomInt = Random.Range( 0, audioHits.Length );
+		int randomInt2 = Random.Range( 0, audioHitYells.Length );
+		
+		audio.PlayOneShot( audioHits[ randomInt ] );
+		audio.PlayOneShot( audioHitYells[randomInt2] );
+	}
+	
+
+	
 }
