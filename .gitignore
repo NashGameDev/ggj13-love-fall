@@ -8,3 +8,7 @@
 *.sln
 
 LoveFall/RawAssets/Models/Human_001/human_001.fbx
+
+LoveFall/Mac/.DS_Store
+
+LoveFall/RawAssets/Models/.DS_Store

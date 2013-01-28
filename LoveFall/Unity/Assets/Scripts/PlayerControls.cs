@@ -62,6 +62,7 @@ public class PlayerControls : MonoBehaviour {
 	public AudioClip[] audioHitYells;
 	public AudioClip[] audioHits;
 	public AudioClip audioWind;
+	public AudioClip heart;
 	
 	public bool audioYell = false;
 	
@@ -70,6 +71,7 @@ public class PlayerControls : MonoBehaviour {
 	
 	public bool Win;
 	public bool Dead;
+	public bool start = true;
 	
 	// Use this for initialization
 	void Awake () {
@@ -84,10 +86,11 @@ public class PlayerControls : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 	
+		
 		bool moving = false;
 		Vector3 oldPosition = thisTransform.position;
 		
-		if( !Dead && !Win ) {
+		if( !Dead && !Win && !start ) {
 			
 			
 			// Check for collision
@@ -105,7 +108,7 @@ public class PlayerControls : MonoBehaviour {
 					
 						thisTransform.position = oldPosition + ((Vector3.left * moveSpeed) * Time.deltaTime);
 						
-						if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+						if( playerMesh.animation.IsPlaying( animIdle.name ) && !playerMesh.animation.IsPlaying( animJumpDive.name ) ) {
 							playerMesh.animation.CrossFade( animRun.name );
 							playerMesh.animation[ animRun.name ].speed = animRunSpeed;
 						
@@ -122,7 +125,7 @@ public class PlayerControls : MonoBehaviour {
 							
 							
 							
-							if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+							if( playerMesh.animation.IsPlaying( animIdle.name ) && !playerMesh.animation.IsPlaying( animJumpDive.name )) {
 								playerMesh.animation.CrossFade( animRun.name );
 								playerMesh.animation[ animRun.name ].speed = animRunSpeed;
 								
@@ -149,7 +152,7 @@ public class PlayerControls : MonoBehaviour {
 					
 						thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
 						
-						if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+						if( playerMesh.animation.IsPlaying( animIdle.name ) && !playerMesh.animation.IsPlaying( animJumpDive.name ) ) {
 							playerMesh.animation.CrossFade( animRun.name );
 							playerMesh.animation[ animRun.name ].speed = animRunSpeed;
 							
@@ -163,7 +166,7 @@ public class PlayerControls : MonoBehaviour {
 						if( fallTimer < maxFallTime ) {
 							
 							thisTransform.position = oldPosition + ((Vector3.right * moveSpeed) * Time.deltaTime);
-							if( playerMesh.animation.IsPlaying( animIdle.name ) ) {
+							if( playerMesh.animation.IsPlaying( animIdle.name )&& !playerMesh.animation.IsPlaying( animJumpDive.name )) {
 								playerMesh.animation.CrossFade( animRun.name );
 								playerMesh.animation[ animRun.name ].speed = animRunSpeed;
 								
@@ -308,7 +311,7 @@ public class PlayerControls : MonoBehaviour {
 			
 			// Idle animation
 			
-			if( !playerMesh.animation.IsPlaying( animJump.name ) && !playerMesh.animation.IsPlaying( animBounce.name ) ) {
+			if( !playerMesh.animation.IsPlaying( animJump.name ) && !playerMesh.animation.IsPlaying( animBounce.name )&& !playerMesh.animation.IsPlaying( animJumpDive.name ) ) {
 				playerMesh.animation.CrossFade( animIdle.name );
 				
 				//playerMesh.transform.forward = Vector3.forward;
@@ -323,8 +326,6 @@ public class PlayerControls : MonoBehaviour {
 			else
 				playerMesh.transform.forward = Vector3.left;
 		}
-
-		
 				
 	}
 	
@@ -361,29 +362,26 @@ public class PlayerControls : MonoBehaviour {
 		}
 	}
 	
-	
 	void OnTriggerEnter( Collider hit ) {
-	
-		//Collider hit = col.collider;
 		
-		DebugMessage( hit.collider.name );
-			
 		switch( hit.collider.tag ) {
 		
-		case "Heart":
-			ScoreController.score++;
-			Destroy(hit.gameObject);
+			case "Heart":
+				ScoreController.score++;
+				Destroy(hit.gameObject);
 			
+			audio.PlayOneShot( heart );
 			break;
 			
 			case "Goal":
 				
-				DebugMessage("You win");
-				Win = true;
-				NotificationCenter.DefaultCenter.PostNotification( this, "Win" );
-			
-				NotificationCenter.DefaultCenter.PostNotification( this, "Win" );
+				if( !Dead ) {
+					DebugMessage("You win");
+					Win = true;
+					NotificationCenter.DefaultCenter.PostNotification( this, "Win" );
 				
+					NotificationCenter.DefaultCenter.PostNotification( this, "Win" );
+				}
 				break;
 			
 			case "ground":
@@ -431,18 +429,20 @@ public class PlayerControls : MonoBehaviour {
 					fallTimer = 0;
 				}
 							
-				break;				
+				break;	
+			
 			case "platform":
 			
 				if( !playerMesh.animation.IsPlaying( animBounce.name ) ) {
 					
 					AudioHitPlatform();
 				
-					onGround = true;
-					
 					rotateZ = 0;
 					rotateZAccel = 0;
 					rotateTilt = 0;
+				
+				
+					onGround = true;
 				
 					if( fallTimer > bounceTimer ) {
 						
@@ -470,9 +470,9 @@ public class PlayerControls : MonoBehaviour {
 				}
 							
 				break;				
-			
-		}			
+		}
 	}
+	
 	
 	void OnTriggerExit( Collider hit ) {
 	
@@ -495,12 +495,22 @@ public class PlayerControls : MonoBehaviour {
 				onGround = false;	
 				
 				
-				break;				
+				break;			
+			
+			case "start":
+			
+				DebugMessage("anim stand dive");
+				playerMesh.animation[ animJumpDive.name ].speed = 3;
+				playerMesh.animation.CrossFade( animJumpDive.name );
+				break;
 		
 		}
 	}
 	
 	void AudioFallYell( ) {
+		
+		if( start )
+			return;
 		
 		if( !audioYell ) {
 			audio.Stop();
@@ -513,6 +523,9 @@ public class PlayerControls : MonoBehaviour {
 	}
 	
 	void AudioHitPlatform() {
+		
+		if( start )
+			return;
 		
 		audioYell = false;
 		
